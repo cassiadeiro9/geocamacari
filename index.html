@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>GeoCamaçari Pro</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+}
+
+header {
+  padding: 15px;
+  text-align: center;
+  background: #1e293b;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+#map {
+  height: 65vh;
+}
+
+.info {
+  padding: 15px;
+  background: #111827;
+  line-height: 1.8;
+}
+
+button {
+  padding: 10px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+🌍 GeoCamaçari PRO - Geoprocessamento em Tempo Real
+</header>
+
+<div id="map"></div>
+
+<div class="info">
+📍 Localização: <span id="loc">Carregando...</span><br>
+🌡️ Temperatura: <span id="temp">--</span><br>
+🌬️ Vento: <span id="wind">--</span><br>
+☁️ Clima: <span id="weather">--</span><br>
+
+<button onclick="centralizar()">Centralizar em Camaçari</button>
+</div>
+
+<script>
+
+// Coordenadas base
+const lat = -12.6975;
+const lon = -38.3242;
+
+// Criar mapa
+const map = L.map('map').setView([lat, lon], 12);
+
+// Camadas
+const mapaPadrao = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+const satelite = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+
+mapaPadrao.addTo(map);
+
+// Controle de camadas
+L.control.layers({
+  "Mapa": mapaPadrao,
+  "Satélite": satelite
+}).addTo(map);
+
+// Marcador principal
+L.marker([lat, lon]).addTo(map)
+  .bindPopup("Camaçari - BA");
+
+// Clique no mapa = mostra coordenadas
+map.on('click', function(e) {
+  L.marker([e.latlng.lat, e.latlng.lng])
+    .addTo(map)
+    .bindPopup(`📍 ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`)
+    .openPopup();
+});
+
+// Geolocalização
+navigator.geolocation.getCurrentPosition(position => {
+  const userLat = position.coords.latitude;
+  const userLon = position.coords.longitude;
+
+  document.getElementById("loc").innerText =
+    userLat.toFixed(4) + ", " + userLon.toFixed(4);
+
+  L.circle([userLat, userLon], {
+    radius: 200,
+  }).addTo(map).bindPopup("Você está aqui");
+
+  map.setView([userLat, userLon], 13);
+});
+
+// Clima em tempo real
+async function clima() {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+  
+  const res = await fetch(url);
+  const data = await res.json();
+
+  document.getElementById("temp").innerText =
+    data.current_weather.temperature + "°C";
+
+  document.getElementById("wind").innerText =
+    data.current_weather.windspeed + " km/h";
+
+  document.getElementById("weather").innerText =
+    "Código: " + data.current_weather.weathercode;
+}
+
+// Centralizar botão
+function centralizar() {
+  map.setView([lat, lon], 12);
+}
+
+// Atualização automática
+setInterval(clima, 20000);
+clima();
+
+</script>
+
+</body>
+</html>
